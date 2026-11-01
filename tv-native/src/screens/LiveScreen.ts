@@ -38,17 +38,19 @@ export class LiveScreen {
 
     this.drawer = new ChannelDrawer(
       (channel) => {
-        this.tuneChannel(channel);
+        this.fecharPainel();
+        if (State.currentChannel?.id !== channel.id) this.tuneChannel(channel);
       },
       (channel) => {
         this.openChannelSources(channel);
-      }
+      },
+      () => this.subirAoMenu()
     );
 
     this.sourceModal = new SourceModal();
 
-    this.element.appendChild(this.zapHud.getElement());
     this.element.appendChild(this.drawer.getElement());
+    this.element.appendChild(this.zapHud.getElement());
     this.element.appendChild(this.sourceModal.getElement());
 
     // Listener de Teclas Específicas do Ao Vivo
@@ -79,6 +81,35 @@ export class LiveScreen {
     if (State.channels.length > 0) {
       this.tuneDefaultChannel();
     }
+    // Pelo menu abre o painel; vindo de um cartão, já em tela cheia.
+    if (State.previousScreen !== 'player' && !State.canalEscolhido) this.abrirPainel();
+    else this.fecharPainel();
+    State.canalEscolhido = false;
+  }
+
+  private abrirPainel() {
+    if (this.drawer.isOpen()) return;
+    this.zapHud.hide();
+    this.player.setRect?.(896, 130, 988, 556);
+    const v = document.getElementById('tv-video') as HTMLElement;
+    Object.assign(v.style, { left: '896px', top: '130px', width: '988px', height: '556px' });
+    SpatialNav.limpar();
+    this.drawer.open(State.channels, State.currentChannel);
+    State.emit('tela-cheia', false);
+  }
+
+  private fecharPainel() {
+    this.drawer.close();
+    this.player.setRect?.(0, 0, 1920, 1080);
+    const v = document.getElementById('tv-video') as HTMLElement;
+    Object.assign(v.style, { left: '0', top: '0', width: '1920px', height: '1080px' });
+    State.emit('tela-cheia', true);
+  }
+
+  private subirAoMenu() {
+    const menu = document.getElementById('tv-menu-global');
+    const aba = menu?.querySelector<HTMLElement>('.tv-menu-tab.active');
+    if (aba) SpatialNav.focus(aba);
   }
 
   private tuneDefaultChannel() {
@@ -96,7 +127,7 @@ export class LiveScreen {
   leave() {
     this.element.classList.add('hidden');
     this.zapHud.hide();
-    this.drawer.close();
+    this.fecharPainel();
     this.sourceModal.close();
     this.player.stop();
   }
@@ -184,11 +215,12 @@ export class LiveScreen {
     // Se o Drawer de Canais ou o Modal de Fontes estiver aberto, deixa o SpatialNav tratar
     if (this.drawer.isOpen() || this.sourceModal.isOpen()) {
       if (e.keyCode === 10009 || e.keyCode === 461 || e.keyCode === 8 || e.keyCode === 27) {
-        // BACK fecha gaveta ou modal
-        e.preventDefault();
-        e.stopPropagation();
-        this.drawer.close();
-        this.sourceModal.close();
+        // BACK: modal fecha; o painel deixa o Voltar ir para o Início
+        if (this.sourceModal.isOpen()) {
+          e.preventDefault();
+          e.stopPropagation();
+          this.sourceModal.close();
+        }
       }
       return;
     }
@@ -207,21 +239,15 @@ export class LiveScreen {
       e.stopPropagation();
       this.zapNext();
     } else if (key === 13) {
-      // ENTER / OK -> Abre Drawer de Canais
+      // OK mostra ou esconde a barra do canal
       e.preventDefault();
       e.stopPropagation();
-      if (!this.drawer.isOpen()) {
-        this.drawer.open(State.channels, State.currentChannel);
-      }
+      if (State.currentChannel) this.zapHud.show(State.currentChannel, State.currentVariantIndex);
     } else if (key === 37) {
-      // ESQUERDA -> Abre Menu Global
+      // ESQUERDA -> Painel de canais
       e.preventDefault();
       e.stopPropagation();
-      const menu = document.getElementById('tv-menu-global');
-      if (menu) {
-        const activeTab = menu.querySelector<HTMLElement>('.tv-menu-tab.active') || menu.querySelector<HTMLElement>('.tv-menu-tab');
-        if (activeTab) SpatialNav.focus(activeTab);
-      }
+      this.abrirPainel();
     } else if (key === 39) {
       // ESQUERDA/DIREITA: Seta Direita apenas mostra o ZapHUD com informações do canal, sem abrir modal
       e.preventDefault();

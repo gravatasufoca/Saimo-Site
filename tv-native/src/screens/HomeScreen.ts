@@ -37,8 +37,8 @@ export class HomeScreen {
     this.scrollContainer.appendChild(this.heroBanner.getElement());
 
     // Trilhos Locais Fixos
-    this.continueRail = new Rail('Continuar Assistindo', false);
-    this.liveRail = new Rail('Ao Vivo Agora', true);
+    this.continueRail = new Rail('Continuar assistindo', false);
+    this.liveRail = new Rail('Ao vivo agora', true);
 
     this.scrollContainer.appendChild(this.continueRail.getElement());
     this.scrollContainer.appendChild(this.liveRail.getElement());
@@ -52,11 +52,8 @@ export class HomeScreen {
 
   enter() {
     this.element.classList.remove('hidden');
-    this.heroBanner.setDefault(
-      'Saimo TV',
-      'Filmes · Séries · Ao Vivo em 60 FPS',
-      'Navegue com o controle remoto para explorar o acervo completo e sintonizar canais com zero delay.'
-    );
+    const hora = new Date().getHours();
+    this.heroBanner.setDefault(hora >= 5 && hora < 12 ? 'Bom dia' : hora >= 12 && hora < 18 ? 'Boa tarde' : 'Boa noite', 'O que vamos assistir?', '');
 
     // 1. Carrega itens locais e dados em cache imediatamente no frame 0 (< 1ms)
     this.renderContinueWatching();
@@ -168,7 +165,7 @@ export class HomeScreen {
       return {
         id: `ch_rail_${c.id}`,
         title: c.name,
-        subtitle: epg.current?.title || 'Ao Vivo',
+        subtitle: epg.current?.title,
         image: c.logo,
         progressPercent: epg.current ? Math.round(epg.current.progress * 100) : undefined,
         onClick: () => {
@@ -177,10 +174,10 @@ export class HomeScreen {
         onFocus: () => {
           this.heroBanner.setDefault(
             c.name,
-            `Canal Ao Vivo · ${c.category}`,
+            c.category,
             epg.current
               ? `No ar agora: ${epg.current.title} (${epg.current.remainingMin} min restantes). A seguir: ${epg.next?.title || 'Programação ao vivo'}.`
-              : 'Transmissão ao vivo em alta definição com zero delay.'
+              : ''
           );
         },
       };

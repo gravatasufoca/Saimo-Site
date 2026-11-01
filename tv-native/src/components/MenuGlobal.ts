@@ -5,6 +5,7 @@
 
 import { State, MenuTab } from '../core/State';
 import { SpatialNav } from '../core/SpatialNav';
+import { icone } from './Icones';
 
 export class MenuGlobal {
   private element: HTMLElement;
@@ -19,8 +20,7 @@ export class MenuGlobal {
 
     this.element.innerHTML = `
       <div class="tv-menu-logo">
-        <img src="icons/icon-192.png" onerror="this.style.display='none'" alt="Saimo TV" />
-        <span>SAIMO TV</span>
+        <img src="img/icone.png" alt="Saimo TV" />
       </div>
       <nav class="tv-menu-tabs" id="tv-menu-tabs"></nav>
       <div class="tv-menu-clock" id="tv-menu-clock">00:00</div>
@@ -44,17 +44,18 @@ export class MenuGlobal {
     this.tabsContainer.innerHTML = '';
 
     const tabs: { id: MenuTab; label: string; icon: string; screen: any }[] = [
-      { id: 'buscar', label: 'Buscar', icon: '🔍', screen: 'search' },
-      { id: 'inicio', label: 'Início', icon: '🏠', screen: 'home' },
-      { id: 'ao_vivo', label: 'Ao Vivo', icon: '📺', screen: 'live' },
-      { id: 'eventos', label: 'Eventos', icon: '⚽', screen: 'events' },
-      { id: 'on_demand', label: 'On Demand', icon: '🎬', screen: 'ondemand' },
-      { id: 'radios', label: 'Rádios', icon: '📻', screen: 'radios' },
-      { id: 'ajustes', label: 'Ajustes', icon: '⚙️', screen: 'settings' },
+      { id: 'buscar', label: 'Buscar', icon: 'search', screen: 'search' },
+      { id: 'inicio', label: 'Início', icon: 'home', screen: 'home' },
+      { id: 'ao_vivo', label: 'Ao vivo', icon: 'live_tv', screen: 'live' },
+      { id: 'eventos', label: 'Eventos', icon: 'football', screen: 'events' },
+      { id: 'on_demand', label: 'On Demand', icon: 'movie', screen: 'ondemand' },
+      { id: 'favoritos', label: 'Favoritos', icon: 'star', screen: 'favorites' },
+      { id: 'radios', label: 'Rádios', icon: 'radio', screen: 'radios' },
+      { id: 'ajustes', label: '', icon: 'settings', screen: 'settings' },
     ];
 
     if (State.unlockedExtras) {
-      tabs.splice(6, 0, { id: 'extras', label: 'Extras', icon: '🔒', screen: 'ondemand' });
+      tabs.splice(6, 0, { id: 'extras', label: 'Extras', icon: 'more', screen: 'ondemand' });
     }
 
     tabs.forEach((t) => {
@@ -63,7 +64,7 @@ export class MenuGlobal {
       btn.setAttribute('data-nav', 'true');
       btn.setAttribute('data-tab-id', t.id);
       btn.id = `menu-tab-${t.id}`;
-      btn.textContent = `${t.icon} ${t.label}`;
+      btn.innerHTML = `${icone(t.icon)}${t.label ? `<span>${t.label}</span>` : ''}`;
 
       btn.addEventListener('click', () => {
         State.setScreen(t.screen);

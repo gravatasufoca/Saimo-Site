@@ -5,6 +5,7 @@
  */
 
 import { Storage } from './Storage';
+import { MinhasListas } from './MinhasListas';
 
 export interface ChannelVariant {
   url: string;
@@ -133,8 +134,11 @@ export class Api {
       const text = await res.text();
       const parsed = this.parseChannels(text);
       if (parsed.length > 0) {
-        this.channelsCache = parsed;
         Storage.setCachedChannels(parsed);
+        const minhas = await MinhasListas.canais().catch(() => []);
+        let n = parsed.length;
+        minhas.forEach((c) => { c.number = ++n; });
+        this.channelsCache = parsed.concat(minhas);
       }
       return this.channelsCache;
     } catch (e) {
@@ -194,6 +198,11 @@ export class Api {
       channels.push(current as Channel);
     }
 
+    // Mesma ordem de seções da TV Box; o número segue essa ordem.
+    const ordem = ['TV Aberta', 'Filmes e Séries', 'Esportes', 'Notícias', 'Infantil', 'Documentários', 'Pluto TV', '24 Horas', 'Variedades'];
+    const peso = (c: Channel) => { const i = ordem.indexOf(c.category); return i < 0 ? ordem.length : i; };
+    channels.sort((a, b) => peso(a) - peso(b) || a.number - b.number);
+    channels.forEach((c, i) => { c.number = i + 1; });
     return channels;
   }
 

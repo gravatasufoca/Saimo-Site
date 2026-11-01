@@ -37,7 +37,7 @@ export class EventsScreen {
     }
 
     this.scrollContainer.innerHTML = `
-      <div style="font-size:36px; font-weight:900; margin-bottom:8px;">⚽ Jogos & Eventos Esportivos</div>
+      <div style="font-size:36px; font-weight:900; margin-bottom:8px;">Jogos & Eventos Esportivos</div>
       <div style="font-size:18px; color:rgba(255,255,255,0.7); margin-bottom:30px;">
         Selecione uma partida para assistir diretamente no canal transmissor.
       </div>

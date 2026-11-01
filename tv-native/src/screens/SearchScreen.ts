@@ -36,7 +36,7 @@ export class SearchScreen {
 
     this.inputDisplay = document.createElement('div');
     this.inputDisplay.className = 'tv-search-input-box';
-    this.inputDisplay.innerHTML = `<span>🔍</span><span id="search-query-text" style="color:rgba(255,255,255,0.5);">Digite para buscar...</span>`;
+    this.inputDisplay.innerHTML = `<span id="search-query-text" style="color:rgba(255,255,255,0.5);">Digite para buscar...</span>`;
     leftCol.appendChild(this.inputDisplay);
 
     this.keyboard = new VirtualKeyboard({

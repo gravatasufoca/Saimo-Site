@@ -33,7 +33,7 @@ export class Rail {
     this.element.innerHTML = `
       <div class="tv-rail-header">
         <span class="tv-rail-title">${title}</span>
-        <span class="tv-rail-count" style="font-size:16px; opacity:0.6;"></span>
+        <span class="tv-rail-count"></span>
       </div>
       <div class="tv-rail-items tv-scroll-h"></div>
     `;
@@ -49,7 +49,7 @@ export class Rail {
 
   setCards(cards: CardModel[]) {
     this.itemsContainer.innerHTML = '';
-    this.countEl.textContent = cards.length > 0 ? `(${cards.length})` : '';
+    
 
     cards.forEach((card, idx) => {
       const cardEl = document.createElement('div');
@@ -62,16 +62,14 @@ export class Rail {
       if (this.isWide) {
         innerHtml = `
           <div class="tv-card-wide-inner">
-            ${card.image ? `<img class="tv-card-img" src="${card.image}" onerror="this.style.display='none'" loading="lazy" alt="" />` : '<div class="tv-card-placeholder"></div>'}
-            <div class="tv-card-wide-info">
-              <div class="tv-card-title">${card.title}</div>
-              ${card.subtitle ? `<div class="tv-card-subtitle">${card.subtitle}</div>` : ''}
-              ${card.progressPercent !== undefined ? `
-                <div class="tv-card-progress-bar">
-                  <div class="tv-card-progress-fill" style="width: ${card.progressPercent}%"></div>
-                </div>` : ''}
-            </div>
+            ${card.image ? `<img class="tv-card-img" src="${card.image}" onerror="this.style.display='none'" loading="lazy" alt="" />` : ''}
           </div>
+          <div class="tv-card-title">${card.title}</div>
+          ${card.subtitle ? `<div class="tv-card-subtitle">${card.subtitle}</div>` : ''}
+          ${card.progressPercent !== undefined ? `
+            <div class="tv-card-progress-bar">
+              <div class="tv-card-progress-fill" style="width: ${card.progressPercent}%"></div>
+            </div>` : ''}
         `;
       } else {
         innerHtml = `

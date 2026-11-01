@@ -7,6 +7,7 @@
 import { TVPlayerInstance, PlaybackSource, PlayerEvents, AudioTrack, SubtitleTrack } from './TVPlayer';
 
 export class TizenAVPlayer implements TVPlayerInstance {
+  private rect = [0, 0, 1920, 1080];
   private avplay: any;
   private events: PlayerEvents;
   private currentDuration = 0;
@@ -30,7 +31,7 @@ export class TizenAVPlayer implements TVPlayerInstance {
       this.avplay.open(source.url);
 
       // Tela cheia no plano de hardware de vídeo
-      this.avplay.setDisplayRect(0, 0, 1920, 1080);
+      this.avplay.setDisplayRect(this.rect[0], this.rect[1], this.rect[2], this.rect[3]);
       this.avplay.setDisplayMethod('PLAYER_DISPLAY_MODE_AUTO_ASPECT_RATIO');
 
       // Otimização de Buffers para Live e VOD
@@ -152,6 +153,11 @@ export class TizenAVPlayer implements TVPlayerInstance {
       this.avplay.stop();
       this.avplay.close();
     } catch (e) {}
+  }
+
+  setRect(x: number, y: number, w: number, h: number) {
+    this.rect = [x, y, w, h];
+    try { this.avplay?.setDisplayRect(x, y, w, h); } catch { /* ainda sem vídeo */ }
   }
 
   destroy() {

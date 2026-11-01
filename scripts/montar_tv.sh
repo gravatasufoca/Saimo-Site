@@ -24,6 +24,8 @@ preparar() { # preparar pasta
   mkdir -p "$pasta"
   cp tv-native/dist/index.html "$pasta/"
   cp tv-native/dist/saimo-tv.js "$pasta/"
+  cp -R tv-native/dist/fonts tv-native/dist/img "$pasta/"
+  [ -f tv-native/dist/saimo-tv.css ] && cp tv-native/dist/saimo-tv.css "$pasta/"
   # Transforma o script em defer comum para compatibilidade universal com TVs antigas (Chrome 53+) e modernas
   sed -i '' 's/type="module" crossorigin/defer/g' "$pasta/index.html" || sed -i 's/type="module" crossorigin/defer/g' "$pasta/index.html"
   if [ -d "public/icons" ]; then

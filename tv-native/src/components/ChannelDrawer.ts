@@ -1,106 +1,172 @@
 /**
- * Gaveta Lateral de Canais (Live TV Channel Drawer).
- * Abre com OK na tela cheia ao vivo para troca rápida de canais e escolha de fontes sem sair do vídeo.
+ * Painel "Canais" da TV Box: seções em pílulas, lista à esquerda e prévia do
+ * vídeo à direita. A lista desenha só as linhas visíveis: com centenas de canais,
+ * um elemento por canal travava a TV.
  */
 
 import { Channel, Api } from '../core/Api';
 import { SpatialNav } from '../core/SpatialNav';
+import { Storage } from '../core/Storage';
+
+const LINHAS = 3;
+const ORDEM = ['TV Aberta', 'Filmes e Séries', 'Esportes', 'Notícias', 'Infantil', 'Documentários', 'Pluto TV', '24 Horas', 'Variedades'];
+
+function hora(d: Date): string {
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
 
 export class ChannelDrawer {
   private element: HTMLElement;
-  private categoryTitleEl: HTMLElement;
-  private channelListEl: HTMLElement;
-  private channels: Channel[] = [];
-  private onSelectChannel?: (channel: Channel) => void;
-  private onOpenChannelSources?: (channel: Channel) => void;
+  private chipsEl: HTMLElement;
+  private listaEl: HTMLElement;
+  private contaEl: HTMLElement;
+  private totalEl: HTMLElement;
+  private infoEl: HTMLElement;
+  private todos: Channel[] = [];
+  private filtrados: Channel[] = [];
+  private secoes: string[] = [];
+  private secao = 0;
+  private foco = 0;
+  private topo = 0;
+  private area: 'lista' | 'chips' = 'lista';
 
   constructor(
-    onSelectChannel: (channel: Channel) => void,
-    onOpenChannelSources?: (channel: Channel) => void
+    private onSelectChannel: (channel: Channel) => void,
+    private onOpenChannelSources?: (channel: Channel) => void,
+    private onSubir?: () => void
   ) {
-    this.onSelectChannel = onSelectChannel;
-    this.onOpenChannelSources = onOpenChannelSources;
     this.element = document.createElement('div');
-    this.element.className = 'tv-channel-drawer hidden';
+    this.element.className = 'tv-painel-canais hidden';
     this.element.id = 'tv-channel-drawer';
-
     this.element.innerHTML = `
-      <div class="tv-drawer-category-title" id="drawer-cat-title" style="padding-bottom:12px;">Todos os Canais</div>
-      <div class="tv-drawer-channel-list tv-scroll-v" id="drawer-ch-list" style="flex:1;"></div>
-      <div class="tv-drawer-footer" style="padding:14px 20px; font-size:14px; color:#94a3b8; border-top:1px solid rgba(255,255,255,0.1); background:#0c0c12; display:flex; justify-content:space-between; align-items:center;">
-        <span>[OK] Assistir</span>
-        <span>[Voltar / Direita] Fechar</span>
-      </div>
+      <div class="tv-painel-fundo a"></div><div class="tv-painel-fundo b"></div><div class="tv-painel-fundo c"></div>
+      <div class="tv-painel-titulo">Canais</div>
+      <div class="tv-painel-conta"><b id="pc-conta"></b><span id="pc-total"></span></div>
+      <div class="tv-painel-chips"><div id="pc-chips"></div></div>
+      <div class="tv-painel-lista" id="pc-lista"></div>
+      <div class="tv-painel-dica">OK assiste  ·  esquerda: seções  ·  direita: fontes</div>
+      <div class="tv-painel-info" id="pc-info"></div>
     `;
-
-    this.categoryTitleEl = this.element.querySelector('#drawer-cat-title')!;
-    this.channelListEl = this.element.querySelector('#drawer-ch-list')!;
-
-    // Seta para a Direita fecha a gaveta e retorna para a tela cheia
-    this.element.addEventListener('keydown', (e) => {
-      if (e.keyCode === 39) { // RIGHT
-        e.preventDefault();
-        e.stopPropagation();
-        this.close();
-      }
-    });
+    this.chipsEl = this.element.querySelector('#pc-chips')!;
+    this.listaEl = this.element.querySelector('#pc-lista')!;
+    this.contaEl = this.element.querySelector('#pc-conta')!;
+    this.totalEl = this.element.querySelector('#pc-total')!;
+    this.infoEl = this.element.querySelector('#pc-info')!;
+    window.addEventListener('keydown', (e) => this.teclas(e), true);
   }
 
   getElement(): HTMLElement {
     return this.element;
   }
 
-  open(channels: Channel[], currentChannel: Channel | null, category = 'Todos os Canais') {
-    this.channels = channels;
-    this.categoryTitleEl.textContent = category;
-    this.channelListEl.innerHTML = '';
+  open(channels: Channel[], atual: Channel | null) {
+    this.todos = channels;
+    const vistas = new Set(channels.map((c) => c.category || 'Outros'));
+    this.secoes = ORDEM.filter((s) => vistas.has(s));
+    vistas.forEach((s) => { if (!this.secoes.includes(s)) this.secoes.push(s); });
+    if (Storage.getFavoriteChannels().size > 0) this.secoes.unshift('Favoritos');
 
-    channels.forEach((ch, idx) => {
-      const item = document.createElement('div');
-      item.className = `tv-drawer-channel-item nav-focusable ${currentChannel?.id === ch.id ? 'active' : ''}`;
-      item.setAttribute('data-nav', 'true');
-      item.id = `drawer-ch-${ch.id}`;
-
-      const epg = Api.getNowNext(ch.name);
-      const programTitle = epg.current?.title || 'Ao Vivo';
-      const variantCount = ch.variants?.length || 1;
-
-      item.innerHTML = `
-        <span class="num">${ch.number}</span>
-        ${ch.logo ? `<img src="${ch.logo}" onerror="this.style.display='none'" alt="" />` : ''}
-        <div style="flex:1; overflow:hidden;">
-          <div class="name">${ch.name}</div>
-          <div style="font-size:14px; color:rgba(255,255,255,0.6); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${programTitle}</div>
-        </div>
-      `;
-
-      item.addEventListener('click', () => {
-        this.close();
-        this.onSelectChannel?.(ch);
-      });
-
-      this.channelListEl.appendChild(item);
-    });
-
-    this.element.classList.remove('hidden');
-    SpatialNav.setTrap(this.element);
-
-    // Foca o canal atual ou o primeiro
-    const target = currentChannel
-      ? this.channelListEl.querySelector<HTMLElement>(`#drawer-ch-${currentChannel.id}`)
-      : this.channelListEl.querySelector<HTMLElement>('.tv-drawer-channel-item');
-
-    if (target) {
-      SpatialNav.focus(target);
+    const i = atual ? this.secoes.indexOf(atual.category) : -1;
+    this.secao = i >= 0 ? i : 0;
+    this.area = 'lista';
+    this.filtrar();
+    if (atual) {
+      const p = this.filtrados.findIndex((c) => c.id === atual.id);
+      if (p >= 0) this.foco = p;
     }
+    this.element.classList.remove('hidden');
+    this.desenhar();
   }
 
   close() {
     this.element.classList.add('hidden');
-    SpatialNav.setTrap(null);
   }
 
   isOpen(): boolean {
     return !this.element.classList.contains('hidden');
+  }
+
+  private filtrar() {
+    const nome = this.secoes[this.secao];
+    const favs = Storage.getFavoriteChannels();
+    this.filtrados = this.todos.filter((c) => (nome === 'Favoritos' ? favs.has(c.name) : (c.category || 'Outros') === nome));
+    this.foco = 0;
+    this.topo = 0;
+  }
+
+  private desenhar() {
+    this.contaEl.textContent = String(this.filtrados.length);
+    this.totalEl.textContent = String(this.todos.length);
+
+    let html = '';
+    this.secoes.forEach((s, i) => {
+      const classe = i !== this.secao ? '' : this.area === 'chips' ? 'foco' : 'atual';
+      html += `<span id="pc-chip-${i}" class="tv-chip ${classe}">${s}</span>`;
+    });
+    this.chipsEl.innerHTML = html;
+    const chip = this.chipsEl.querySelector<HTMLElement>(`#pc-chip-${this.secao}`);
+    const fim = chip ? chip.offsetLeft + chip.offsetWidth : 0;
+    this.chipsEl.style.transform = `translateX(${Math.min(0, 760 - fim)}px)`;
+
+    if (this.foco < this.topo) this.topo = this.foco;
+    if (this.foco >= this.topo + LINHAS) this.topo = this.foco - LINHAS + 1;
+    this.listaEl.innerHTML = this.filtrados.slice(this.topo, this.topo + LINHAS).map((c, i) => {
+      const focado = this.area === 'lista' && this.topo + i === this.foco;
+      const epg = Api.getNowNext(c.name).current;
+      return `<div class="tv-canal ${focado ? 'foco' : ''}">
+        <span class="n">${c.number}</span>
+        <span class="l">${c.logo ? `<img src="${c.logo}" alt="" onerror="this.style.display='none'" />` : ''}</span>
+        <span class="t">
+          ${focado ? `<i>${(c.category || '').toUpperCase()}</i>` : ''}
+          <b>${c.name}</b>
+          ${epg ? `<em>${epg.title}</em><u><s style="width:${Math.round(epg.progress * 100)}%"></s></u>` : ''}
+        </span>
+      </div>`;
+    }).join('');
+    this.mostrarInfo();
+  }
+
+  private mostrarInfo() {
+    const c = this.filtrados[this.foco];
+    if (!c) { this.infoEl.innerHTML = ''; return; }
+    const { current, next } = Api.getNowNext(c.name);
+    this.infoEl.innerHTML = `<div class="c">${c.number}  ${c.name}</div>
+      <div class="p">${current ? current.title : 'Ao vivo'}</div>
+      ${current ? `<div class="h">${hora(current.start)} – ${hora(current.stop)}  ·  faltam ${current.remainingMin} min</div>` : ''}
+      ${next ? `<div class="h">A seguir: ${next.title}</div>` : ''}`;
+  }
+
+  private teclas(e: KeyboardEvent) {
+    if (!this.isOpen()) return;
+    const k = e.keyCode;
+    if (SpatialNav.noMenu()) {
+      if (k !== 40) return;
+      SpatialNav.limpar();
+      this.area = 'lista';
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      this.desenhar();
+      return;
+    }
+    if (![37, 38, 39, 40, 13].includes(k)) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+
+    if (this.area === 'chips') {
+      if (k === 37 && this.secao > 0) this.secao--;
+      else if (k === 39 && this.secao < this.secoes.length - 1) this.secao++;
+      else if (k === 40 || k === 13) this.area = 'lista';
+      else if (k === 38) { this.onSubir?.(); return; }
+      else return;
+      if (k === 37 || k === 39) this.filtrar();
+    } else {
+      if (k === 40 && this.foco < this.filtrados.length - 1) this.foco++;
+      else if (k === 38 && this.foco > 0) this.foco--;
+      else if (k === 37 || k === 38) this.area = 'chips';
+      else if (k === 39) { const c = this.filtrados[this.foco]; if (c) this.onOpenChannelSources?.(c); return; }
+      else if (k === 13) { const c = this.filtrados[this.foco]; if (c) this.onSelectChannel(c); return; }
+      else return;
+    }
+    this.desenhar();
   }
 }

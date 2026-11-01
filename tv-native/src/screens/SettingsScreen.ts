@@ -77,7 +77,10 @@ export class SettingsScreen {
     };
 
     // 1. REPRODUÇÃO
-    addSection('Reprodução & Inicialização');
+    addSection('Listas');
+    addOption('minhas', 'Minhas listas', 'Adicionar listas .m3u pelo link', () => State.setScreen('minhas'));
+
+    addSection('Reprodução');
 
     addOption(
       'abrir-em',
@@ -158,23 +161,7 @@ export class SettingsScreen {
     );
 
     // 3. CONTROLE PARENTAL
-    addSection('Controle Parental');
-
-    addOption(
-      'bloqueio-parental',
-      'Canais Adultos / Extras',
-      State.unlockedExtras ? '🔓 Desbloqueado' : '🔒 Bloqueado (PIN: 1010)',
-      () => {
-        if (!State.unlockedExtras) {
-          State.unlockParental('1010');
-        } else {
-          State.unlockedExtras = false;
-        }
-      }
-    );
-
-    // 4. MEMÓRIA & CACHE
-    addSection('Dados & Cache');
+    addSection('Dados');
 
     addOption(
       'limpar-progresso',
@@ -187,7 +174,7 @@ export class SettingsScreen {
     );
 
     // 5. SOBRE
-    addSection('Sobre o Saimo TV');
+    addSection('Sobre');
 
     const platformLabel = Platform.isTizen
       ? 'Samsung Smart TV (Tizen Native)'
@@ -196,7 +183,6 @@ export class SettingsScreen {
       : 'Navegador Web / Simulador';
 
     addOption('sobre-plataforma', 'Sistema Operacional', platformLabel, () => {});
-    addOption('sobre-versao', 'Versão Nativa', '2.0.0 Ultra-Fast (60 FPS)', () => {});
-    addOption('sobre-resolucao', 'Resolução de Saída', '1920x1080 Full HD (Hardware Video Plane)', () => {});
-  }
+    addOption('sobre-versao', 'Versão', '2.6.0', () => {});
+      }
 }

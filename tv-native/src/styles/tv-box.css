@@ -1,0 +1,175 @@
+/*
+ * Camada de layout da TV Box: mesmas cores, fonte e medidas (dp × 2).
+ * Sem sombra, desfoque nem transição: TV barata desenha cada frame na CPU.
+ */
+@font-face { font-family: Roboto; font-weight: 400; src: url(/fonts/Roboto-Regular.ttf); }
+@font-face { font-family: Roboto; font-weight: 500; src: url(/fonts/Roboto-Medium.ttf); }
+
+*, *::before, *::after {
+  transition: none !important;
+  animation: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  text-shadow: none !important;
+}
+
+.hidden { display: none !important; }
+
+body, html {
+  background: #0b0e14 url(/img/fundo.jpg) no-repeat 0 0 / 1920px 1080px;
+  font-family: Roboto, sans-serif;
+  font-size: 28px;
+  font-weight: 400;
+}
+.tv-video-container { background: transparent; }
+
+/* Foco: moldura ciano arredondada, sem escala */
+.nav-focusable { border: 4px solid transparent; transform: none; will-change: auto; }
+.nav-focused { transform: none !important; border-color: #4FE3D0 !important; background: rgba(255,255,255,.16) !important; }
+
+/* Menu do topo */
+.tv-menu-global {
+  position: absolute; top: 0; left: 0; width: 1920px; height: 116px; z-index: 100;
+  display: flex; align-items: center; padding: 36px 80px 16px; background: none; border: 0;
+}
+.tv-menu-logo { display: flex; margin-right: 20px; }
+.tv-menu-logo img { width: 56px; height: 56px; border-radius: 14px; }
+.tv-menu-tabs { display: flex; gap: 2px; flex: 1; }
+.tv-menu-tab {
+  display: flex; align-items: center; gap: 12px; height: 64px; padding: 0 22px;
+  border: 0 !important; border-radius: 32px; background: none;
+  color: #fff; font-size: 32px; font-weight: 500; opacity: 1;
+}
+.tv-menu-tab .tv-icone { width: 36px; height: 36px; }
+.tv-menu-tab.active { background: rgba(255,255,255,.12) !important; color: #fff; }
+.tv-menu-tab.nav-focused { background: #fff !important; color: #0b0e14 !important; }
+.tv-menu-clock { font-size: 36px; font-weight: 400; color: #fff; }
+
+/* Cabeçalho que segue o foco */
+.tv-screen-scroll { padding-top: 116px; overflow: hidden; }
+.tv-hero-banner { height: 300px; padding: 10px 112px 0; color: #fff; overflow: visible; }
+.tv-hero-bg { position: absolute; top: -116px; left: 0; width: 1920px; height: 1080px; object-fit: cover; opacity: .18; z-index: -1; mask-image: none; -webkit-mask-image: none; }
+.tv-hero-title { font-size: 60px; font-weight: 500; line-height: 76px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tv-hero-meta { font-size: 30px; line-height: 44px; color: #4FE3D0; font-weight: 400; }
+.tv-hero-synopsis { font-size: 28px; line-height: 40px; color: #fff; max-width: 1200px; max-height: 80px; overflow: hidden; }
+
+/* Fileiras */
+.tv-rail { padding: 0 0 0 100px; margin: 0 0 20px; }
+.tv-rail-header { padding: 0 12px 16px; }
+.tv-rail-title { font-size: 36px; font-weight: 500; color: #fff; }
+.tv-rail-count { display: none; }
+.tv-rail-items { display: flex; gap: 32px; overflow: hidden; padding: 0; }
+
+.tv-card {
+  flex: 0 0 272px; width: 272px; padding: 8px; border-radius: 26px; background: none;
+  border: 4px solid transparent;
+}
+.tv-card-poster-wrap { position: relative; width: 248px; height: 380px; border-radius: 16px; overflow: hidden; background: rgba(255,255,255,.08); }
+.tv-card-poster-wrap .tv-card-img, .tv-card-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tv-card > .tv-card-title { font-size: 24px; font-weight: 500; line-height: 30px; color: #fff; margin: 10px 6px 0; max-height: 60px; overflow: hidden; white-space: normal; display: block; }
+.tv-card-subtitle { font-size: 24px; color: #A8B4C0; margin: 2px 6px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.tv-card.wide { flex: 0 0 528px; width: 528px; }
+.tv-card-wide-inner { display: flex; align-items: center; justify-content: center; width: 504px; height: 280px; padding: 30px; border-radius: 22px; background: rgba(255,255,255,.08); }
+.tv-card-wide-inner .tv-card-img { width: 264px; height: 220px; object-fit: contain; border-radius: 0; }
+.tv-card.wide > .tv-card-title { font-size: 30px; line-height: 36px; margin-top: 14px; white-space: nowrap; }
+.tv-card-progress-bar { height: 8px; background: #334155; }
+.tv-card-progress-fill { height: 8px; background: #4FE3D0; }
+
+/* Botões e fichas */
+.tv-btn { height: 84px; padding: 0 44px; border-radius: 16px; font-size: 30px; font-weight: 500; background: rgba(255,255,255,.14); color: #fff; border: 0 !important; display: inline-flex; align-items: center; }
+.tv-btn.primary { background: rgba(255,255,255,.14); color: #fff; }
+.tv-btn.nav-focused { background: #fff !important; color: #0b0e14 !important; }
+.tv-ficha-screen { padding-top: 116px; }
+.tv-ficha-title { font-size: 54px; font-weight: 500; }
+.tv-ficha-synopsis { font-size: 30px; line-height: 42px; color: #fff; }
+.tv-ficha-badge { border-radius: 10px; background: rgba(255,255,255,.1); font-size: 24px; color: #fff; }
+
+/* Modais em painel lateral */
+.tv-modal-overlay { background: rgba(0,0,0,.72); justify-content: flex-end; align-items: stretch; }
+.tv-modal-content { width: 1040px !important; max-width: 1040px !important; background: #0b0e14 !important; border: 0 !important; border-radius: 0 !important; padding: 88px 80px 64px 72px !important; }
+.tv-modal-title { color: #fff !important; font-size: 56px !important; font-weight: 500 !important; }
+
+/* Ajustes */
+.tv-settings-section-title { color: #4FE3D0; font-size: 24px; font-weight: 500; letter-spacing: 1px; }
+.tv-settings-item { border-radius: 16px; border: 0 !important; padding: 24px 30px; background: none; }
+.tv-settings-item.nav-focused { background: #fff !important; }
+.tv-settings-item.nav-focused * { color: #0b0e14 !important; }
+.tv-settings-item-title { font-size: 34px; font-weight: 500; color: #fff; }
+.tv-settings-item-value { font-size: 26px; color: #A8B4C0; }
+
+/* Ao vivo */
+.tv-channel-drawer { background: rgba(11,14,20,.95); }
+.tv-drawer-channel-item { border-radius: 26px; }
+.tv-drawer-channel-item .name { font-size: 38px; font-weight: 500; color: #fff; }
+.tv-drawer-channel-item .num { color: #A8B4C0; font-size: 34px; }
+
+.tv-card-title { position: static !important; background: none !important; padding: 0 !important; left: auto; right: auto; bottom: auto; }
+.tv-card-badge { display: none; }
+.tv-hero-banner { height: 314px; padding-top: 10px; }
+.tv-card img { position: static; z-index: 2; }
+
+html.video-ativo, body.video-ativo { background: #000 !important; }
+html.tizen.video-ativo, html.tizen.video-ativo body { background: transparent !important; }
+.tv-screen { background: none; }
+
+/* Painel de canais: três faixas em volta da janela do vídeo */
+.tv-painel-canais { position: absolute; inset: 0; width: 1920px; height: 1080px; z-index: 20; }
+.tv-painel-fundo { position: absolute; background: #0b0e14; }
+.tv-painel-fundo.a { left: 0; top: 0; width: 896px; height: 1080px; }
+.tv-painel-fundo.b { left: 896px; top: 0; width: 1024px; height: 130px; }
+.tv-painel-fundo.c { left: 896px; top: 686px; width: 1024px; height: 394px; }
+.tv-painel-titulo { position: absolute; left: 64px; top: 160px; font-size: 52px; font-weight: 500; }
+.tv-painel-conta { position: absolute; left: 500px; width: 290px; top: 170px; text-align: right; font-size: 36px; color: #A8B4C0; }
+.tv-painel-conta b { color: #4FE3D0; font-weight: 500; margin-right: 24px; }
+.tv-painel-chips { position: absolute; left: 32px; top: 256px; width: 800px; height: 76px; overflow: hidden; }
+.tv-painel-chips > div { display: inline-flex; gap: 12px; white-space: nowrap; }
+.tv-chip { display: inline-block; height: 68px; line-height: 68px; padding: 0 26px; border-radius: 34px; background: rgba(255,255,255,.1); font-size: 28px; font-weight: 500; color: #fff; }
+.tv-chip.atual { background: rgba(79,227,208,.18); color: #4FE3D0; }
+.tv-chip.foco { background: #fff; color: #0b0e14; }
+.tv-painel-lista { position: absolute; left: 20px; top: 342px; width: 810px; }
+.tv-canal { display: flex; align-items: center; height: 172px; margin-bottom: 4px; border: 4px solid transparent; border-radius: 26px; }
+.tv-canal.foco { border-color: #4FE3D0; background: rgba(255,255,255,.16); }
+.tv-canal .n { width: 80px; text-align: right; font-size: 34px; color: #A8B4C0; flex: none; }
+.tv-canal .l { width: 116px; height: 112px; margin: 0 28px 0 20px; flex: none; border-radius: 18px; background: rgba(255,255,255,.08); display: flex; align-items: center; justify-content: center; }
+.tv-canal .l img { max-width: 100px; max-height: 96px; }
+.tv-canal .t { display: block; min-width: 0; flex: 1; padding-right: 24px; }
+.tv-canal i { display: block; font-style: normal; font-size: 22px; font-weight: 500; color: #4FE3D0; letter-spacing: 1px; }
+.tv-canal b { display: block; font-size: 38px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tv-canal em { display: block; font-style: normal; font-size: 30px; color: #A8B4C0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tv-canal u { display: block; height: 6px; margin-top: 8px; background: rgba(255,255,255,.2); text-decoration: none; }
+.tv-canal u s { display: block; height: 6px; background: #4FE3D0; }
+.tv-painel-dica { position: absolute; left: 60px; top: 950px; width: 780px; font-size: 28px; color: #A8B4C0; }
+.tv-painel-info { position: absolute; left: 944px; top: 708px; width: 880px; height: 290px; padding: 36px 44px; border-radius: 26px; background: rgba(255,255,255,.08); }
+.tv-painel-info .c { font-size: 30px; font-weight: 500; color: #4FE3D0; }
+.tv-painel-info .p { font-size: 42px; font-weight: 500; margin: 10px 0 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tv-painel-info .h { font-size: 30px; color: #D5DCE5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Favoritos */
+.tv-fav-titulo { position: absolute; left: 100px; top: 128px; font-size: 52px; font-weight: 500; z-index: 2; }
+.tv-fav-titulo span { font-size: 26px; font-weight: 400; color: #A8B4C0; margin-left: 20px; }
+.tv-fav-vazio { position: absolute; left: 0; top: 490px; width: 1920px; text-align: center; font-size: 34px; color: #A8B4C0; }
+.tv-favoritos .tv-screen-scroll { padding-top: 220px; }
+
+/* Minhas listas */
+.tv-minhas { padding: 130px 112px 0; }
+.tv-minhas-titulo { font-size: 60px; font-weight: 500; }
+.tv-minhas-ajuda { font-size: 28px; color: #A8B4C0; margin: 8px 0 28px; }
+.tv-campo { display: block; width: 1100px; height: 84px; margin-bottom: 16px; padding: 0 28px; border-radius: 16px; border: 4px solid transparent; background: rgba(255,255,255,.1); color: #fff; font: 400 30px Roboto, sans-serif; }
+.tv-minhas-aviso { min-height: 44px; margin-top: 14px; font-size: 28px; color: #FFB454; }
+.tv-minha-lista { display: flex; align-items: center; gap: 16px; margin-top: 16px; }
+.tv-minha-lista .t { width: 860px; }
+.tv-minha-lista b { display: block; font-size: 34px; font-weight: 500; }
+.tv-minha-lista span { font-size: 26px; color: #A8B4C0; }
+
+/* Eventos */
+.tv-match-card { background: rgba(255,255,255,.08); border-radius: 26px; }
+
+/* Barra do canal */
+.tv-zap-hud { left: 0 !important; right: 0 !important; bottom: 0 !important; width: 1920px !important; height: 460px; padding: 190px 80px 40px !important; border-radius: 0 !important; border: 0 !important; background: linear-gradient(rgba(11,14,20,0), rgba(11,14,20,.95) 60%) !important; }
+.tv-zap-logo { width: 150px !important; height: 150px !important; padding: 12px; border-radius: 22px; background: rgba(255,255,255,.1); object-fit: contain; }
+.tv-zap-channel-line { font-size: 40px; font-weight: 500; color: #fff; }
+.tv-zap-current-program { font-size: 34px; font-weight: 400; color: #fff; }
+.tv-zap-next-line { font-size: 30px; color: #D5DCE5; }
+.tv-zap-progress-container { height: 6px; background: rgba(255,255,255,.2); }
+.tv-zap-progress-bar { height: 6px; background: #4FE3D0; }

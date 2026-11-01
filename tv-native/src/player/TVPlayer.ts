@@ -43,4 +43,6 @@ export interface TVPlayerInstance {
   getCurrentTime(): number;
   setAudioTrack(index: number): void;
   setSubtitleTrack(index: number): void;
+  /** Na Samsung o vídeo é um plano de hardware: a janela vai por aqui. */
+  setRect?(x: number, y: number, w: number, h: number): void;
 }

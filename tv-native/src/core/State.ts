@@ -6,6 +6,8 @@ import { Channel, VODItem } from './Api';
 import { Storage } from './Storage';
 
 export type ScreenType =
+  | 'favorites'
+  | 'minhas'
   | 'live'
   | 'home'
   | 'ondemand'
@@ -32,6 +34,7 @@ export class State {
   static currentScreen: ScreenType = 'home';
   static previousScreen: ScreenType = 'home';
   static activeTab: MenuTab = 'inicio';
+  private static iniciado = false;
 
   static channels: Channel[] = [];
   static currentChannel: Channel | null = null;
@@ -43,6 +46,7 @@ export class State {
   static currentEpisodeIndex = 0;
 
   static unlockedExtras = false;
+  static canalEscolhido = false;
 
   private static listeners: Map<string, Set<(val: any) => void>> = new Map();
 
@@ -68,7 +72,9 @@ export class State {
   }
 
   static setScreen(screen: ScreenType, params?: { vod?: VODItem; channel?: Channel }) {
-    if (this.currentScreen === screen && !params) return;
+    // A primeira chamada sempre passa: é ela que abre a tela inicial.
+    if (this.iniciado && this.currentScreen === screen && !params) return;
+    this.iniciado = true;
 
     this.previousScreen = this.currentScreen;
     this.currentScreen = screen;
@@ -76,6 +82,7 @@ export class State {
     if (params?.vod) this.currentVOD = params.vod;
     if (params?.channel) {
       this.currentChannel = params.channel;
+      this.canalEscolhido = true;
       this.currentVariantIndex = 0;
     }
 
@@ -86,7 +93,8 @@ export class State {
     else if (screen === 'events') this.activeTab = 'eventos';
     else if (screen === 'radios') this.activeTab = 'radios';
     else if (screen === 'search') this.activeTab = 'buscar';
-    else if (screen === 'settings') this.activeTab = 'ajustes';
+    else if (screen === 'settings' || screen === 'minhas') this.activeTab = 'ajustes';
+    else if (screen === 'favorites') this.activeTab = 'favoritos';
 
     console.info(`[SaimoTV] Navegando para tela: ${screen}`);
     this.emit('screen-changed', { screen, previous: this.previousScreen, params });

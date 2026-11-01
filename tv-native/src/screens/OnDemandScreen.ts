@@ -58,11 +58,11 @@ export class OnDemandScreen {
     this.filterBar.innerHTML = '';
 
     const chips: { id: CategoryFilter; label: string; color: string }[] = [
-      { id: 'todos', label: '🎬 Todos os Conteúdos', color: '#00e3ff' },
-      { id: 'filmes', label: '🎥 Filmes', color: '#4FE3D0' },
-      { id: 'series', label: '📺 Séries', color: '#7AA2FF' },
-      { id: 'animes', label: '⚡ Animes', color: '#FFB454' },
-      { id: 'doramas', label: '🌸 Doramas', color: '#FF7EB6' },
+      { id: 'todos', label: 'Todos os Conteúdos', color: '#00e3ff' },
+      { id: 'filmes', label: 'Filmes', color: '#4FE3D0' },
+      { id: 'series', label: 'Séries', color: '#7AA2FF' },
+      { id: 'animes', label: 'Animes', color: '#FFB454' },
+      { id: 'doramas', label: 'Doramas', color: '#FF7EB6' },
     ];
 
     chips.forEach((c) => {

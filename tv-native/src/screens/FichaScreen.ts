@@ -220,8 +220,8 @@ export class FichaScreen {
     playBtn.setAttribute('data-nav', 'true');
     playBtn.id = 'ficha-btn-play';
     playBtn.innerHTML = hasProgress
-      ? `▶ Continuar (${Math.round(progress.position / 60)} min)`
-      : '▶ Assistir';
+      ? `Continuar (${Math.round(progress.position / 60)} min)`
+      : 'Assistir';
 
     playBtn.addEventListener('click', () => {
       State.currentVariantIndex = 0;
@@ -237,11 +237,11 @@ export class FichaScreen {
     favBtn.className = 'tv-btn nav-focusable';
     favBtn.setAttribute('data-nav', 'true');
     favBtn.id = 'ficha-btn-fav';
-    favBtn.innerHTML = isFav ? '❤️ Favoritado' : '🤍 Adicionar aos Favoritos';
+    favBtn.innerHTML = isFav ? 'Nos favoritos' : 'Favoritar';
 
     favBtn.addEventListener('click', () => {
       const nowFav = Storage.toggleFavoriteVOD(item.title);
-      favBtn.innerHTML = nowFav ? '❤️ Favoritado' : '🤍 Adicionar aos Favoritos';
+      favBtn.innerHTML = nowFav ? 'Nos favoritos' : 'Favoritar';
     });
     this.actionsContainer.appendChild(favBtn);
 

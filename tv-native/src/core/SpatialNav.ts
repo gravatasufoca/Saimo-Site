@@ -24,6 +24,17 @@ export class SpatialNav {
     window.addEventListener('keydown', (e) => this.handleKeyDown(e), true);
   }
 
+  /** O foco está no menu do topo (e não num painel da tela)? */
+  static noMenu(): boolean {
+    return !!this.currentElement?.closest('#tv-menu-global');
+  }
+
+  /** Tira o foco de tudo: um painel com teclas próprias assume. */
+  static limpar() {
+    this.currentElement?.classList.remove('nav-focused');
+    this.currentElement = null;
+  }
+
   static setTrap(container: HTMLElement | null) {
     this.trapContainer = container;
     if (container) {

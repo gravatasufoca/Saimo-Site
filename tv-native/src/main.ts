@@ -4,6 +4,7 @@
  */
 
 import './styles/tv.css';
+import './styles/tv-box.css';
 import { Platform } from './core/Platform';
 import { SpatialNav } from './core/SpatialNav';
 import { State, ScreenType } from './core/State';
@@ -22,6 +23,8 @@ import { EventsScreen } from './screens/EventsScreen';
 import { RadiosScreen } from './screens/RadiosScreen';
 import { SearchScreen } from './screens/SearchScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
+import { FavoritesScreen } from './screens/FavoritesScreen';
+import { MinhasListasScreen } from './screens/MinhasListasScreen';
 
 class SaimoTVApp {
   private videoEl: HTMLVideoElement;
@@ -34,6 +37,7 @@ class SaimoTVApp {
   constructor() {
     Platform.init();
     SpatialNav.init();
+    if (Platform.isTizen) document.documentElement.classList.add('tizen');
 
     this.videoEl = document.getElementById('tv-video') as HTMLVideoElement;
     this.screensContainer = document.getElementById('tv-screens-container') as HTMLElement;
@@ -59,6 +63,8 @@ class SaimoTVApp {
     this.screens.set('radios', new RadiosScreen(player));
     this.screens.set('search', new SearchScreen());
     this.screens.set('settings', new SettingsScreen());
+    this.screens.set('favorites', new FavoritesScreen());
+    this.screens.set('minhas', new MinhasListasScreen());
 
     // Adiciona elementos das telas ao contêiner
     this.screens.forEach((screen) => {
@@ -66,6 +72,9 @@ class SaimoTVApp {
     });
 
     // Escuta mudanças de tela do State
+    State.on('tela-cheia', (cheia: boolean) => {
+      this.menuGlobal.getElement().style.display = cheia ? 'none' : 'flex';
+    });
     State.on('screen-changed', ({ screen, previous }) => {
       this.handleScreenTransition(screen, previous);
     });
@@ -99,11 +108,11 @@ class SaimoTVApp {
 
     // Mostra/esconde o menu do topo
     const menuEl = this.menuGlobal.getElement();
-    if (nextScreen === 'live' || nextScreen === 'player' || nextScreen === 'ficha') {
-      menuEl.style.display = 'none';
-    } else {
-      menuEl.style.display = 'flex';
-    }
+    menuEl.style.display = nextScreen === 'player' ? 'none' : 'flex';
+    // Na Samsung o vídeo fica atrás da página: o fundo tem de sumir.
+    const comVideo = nextScreen === 'live' || nextScreen === 'player';
+    document.documentElement.classList.toggle('video-ativo', comVideo);
+    document.body.classList.toggle('video-ativo', comVideo);
 
     const nextInstance = this.screens.get(nextScreen);
     if (nextInstance && typeof nextInstance.enter === 'function') {
@@ -122,6 +131,8 @@ class SaimoTVApp {
         State.setScreen(State.previousScreen === 'player' ? 'home' : State.previousScreen);
       } else if (current === 'player') {
         State.setScreen('ficha');
+      } else if (current === 'minhas') {
+        State.setScreen('settings');
       } else if (current === 'live') {
         State.setScreen('home');
       } else if (current !== 'home') {
