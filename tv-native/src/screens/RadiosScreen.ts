@@ -1,49 +1,40 @@
-/**
- * Tela de Rádios Nacionais e Regionais (RadiosScreen).
- * Estações catalogadas por gênero musical e estado, reprodução de áudio streaming nativa e status em tempo real.
- */
+/** Rádios por estilo; OK toca em tela cheia e cima/baixo trocam a estação. */
 
 import { State } from '../core/State';
 import { Api, RadioStation } from '../core/Api';
 import { TVPlayerInstance } from '../player/TVPlayer';
-import { Rail, CardModel } from '../components/Rail';
+import { Rail } from '../components/Rail';
 import { SpatialNav } from '../core/SpatialNav';
+import { HeroBanner } from '../components/HeroBanner';
+
+const ESTILOS = ['Rock', 'Notícias e esporte', 'Gospel e católicas', 'Pop e hits', 'Sertanejo, MPB e samba', 'Clássica e jazz', 'Outras'];
 
 export class RadiosScreen {
   private element: HTMLElement;
-  private scrollContainer: HTMLElement;
-  private player: TVPlayerInstance;
-  private playingRadio: RadioStation | null = null;
-  private nowPlayingBanner: HTMLElement;
+  private grade: HTMLElement;
+  private fileiras: HTMLElement;
+  private tocando: HTMLElement;
+  private hero = new HeroBanner();
+  private estacoes: RadioStation[] = [];
+  private atual = -1;
 
-  private genreRails: Map<string, Rail> = new Map();
-
-  constructor(player: TVPlayerInstance) {
-    this.player = player;
+  constructor(private player: TVPlayerInstance) {
     this.element = document.createElement('div');
     this.element.className = 'tv-screen tv-radios-screen hidden';
     this.element.id = 'screen-radios';
 
-    this.scrollContainer = document.createElement('div');
-    this.scrollContainer.className = 'tv-screen-scroll tv-scroll-v';
-    this.scrollContainer.style.padding = '100px 70px 40px';
+    this.grade = document.createElement('div');
+    this.grade.className = 'tv-screen-scroll tv-scroll-v';
+    this.grade.appendChild(this.hero.getElement());
+    this.fileiras = document.createElement('div');
+    this.grade.appendChild(this.fileiras);
 
-    this.nowPlayingBanner = document.createElement('div');
-    this.nowPlayingBanner.style.padding = '24px 32px';
-    this.nowPlayingBanner.style.background = 'linear-gradient(90deg, #141419 0%, #1c1c24 100%)';
-    this.nowPlayingBanner.style.borderRadius = '16px';
-    this.nowPlayingBanner.style.marginBottom = '34px';
-    this.nowPlayingBanner.style.display = 'none';
-    this.scrollContainer.appendChild(this.nowPlayingBanner);
+    this.tocando = document.createElement('div');
+    this.tocando.className = 'tv-radio-tocando hidden';
 
-    const genres = ['Notícias', 'Rock', 'Sertanejo', 'Pop', 'Gospel', 'Geral'];
-    genres.forEach((g) => {
-      const rail = new Rail(`Rádios · ${g}`, true);
-      this.genreRails.set(g, rail);
-      this.scrollContainer.appendChild(rail.getElement());
-    });
-
-    this.element.appendChild(this.scrollContainer);
+    this.element.appendChild(this.grade);
+    this.element.appendChild(this.tocando);
+    window.addEventListener('keydown', (e) => this.teclas(e), true);
   }
 
   getElement(): HTMLElement {
@@ -52,72 +43,66 @@ export class RadiosScreen {
 
   async enter() {
     this.element.classList.remove('hidden');
-
-    const stations = await Api.fetchRadios();
-    this.populateRails(stations);
-
-    setTimeout(() => {
-      const firstCard = this.scrollContainer.querySelector<HTMLElement>('.tv-card');
-      if (firstCard) SpatialNav.focus(firstCard);
-    }, 50);
+    if (!this.estacoes.length) this.estacoes = await Api.fetchRadios();
+    if (State.currentScreen !== 'radios') return;
+    this.fileiras.innerHTML = '';
+    ESTILOS.forEach((estilo) => {
+      const lista = this.estacoes.filter((s) => s.genre === estilo);
+      if (!lista.length) return;
+      const r = new Rail(estilo, true);
+      // Uma fileira leva no máximo 40: centenas de cartões travariam a TV.
+      r.setCards(lista.slice(0, 40).map((s) => ({
+        id: `radio_${this.estacoes.indexOf(s)}`,
+        title: s.name,
+        image: s.logo,
+        onFocus: () => this.hero.setDefault(s.name, `Rádio ao vivo  ·  ${s.genre}`, 'OK toca  ·  na rádio, cima e baixo trocam de estação'),
+        onClick: () => this.tocar(this.estacoes.indexOf(s)),
+      })));
+      this.fileiras.appendChild(r.getElement());
+    });
+    SpatialNav.focus(this.fileiras.querySelector<HTMLElement>('.tv-card'));
   }
 
   leave() {
+    this.fechar();
     this.element.classList.add('hidden');
-    // Não interrompe áudio imediatamente se a pessoa apenas abriu menu, mas para ao sair de rádios
+  }
+
+  private tocar(i: number) {
+    this.atual = i;
+    const s = this.estacoes[i];
+    this.tocando.innerHTML = `
+      <div class="logo">${s.logo ? `<img src="${s.logo}" alt="" onerror="this.style.display='none'" />` : ''}</div>
+      <div class="selo">AO VIVO</div>
+      <div class="nome">${s.name}</div>
+      <div class="info">${s.genre}  ·  Estação ${i + 1} de ${this.estacoes.length}</div>
+      <div class="dica">cima e baixo trocam de estação  ·  VOLTAR mostra todas as rádios</div>`;
+    this.grade.classList.add('hidden');
+    this.tocando.classList.remove('hidden');
+    SpatialNav.limpar();
+    State.emit('tela-cheia', true);
+    this.player.play({ url: s.url, title: s.name, isLive: true }).catch(() => {});
+  }
+
+  private fechar() {
+    if (this.tocando.classList.contains('hidden')) return;
     this.player.stop();
+    this.tocando.classList.add('hidden');
+    this.grade.classList.remove('hidden');
+    State.emit('tela-cheia', false);
   }
 
-  private populateRails(stations: RadioStation[]) {
-    this.genreRails.forEach((rail, genreName) => {
-      const matching = stations.filter(
-        (s) => s.genre?.toLowerCase().includes(genreName.toLowerCase()) || (genreName === 'Geral' && !s.genre)
-      );
-
-      if (matching.length === 0) {
-        rail.getElement().style.display = 'none';
-      } else {
-        rail.getElement().style.display = 'block';
-        rail.setCards(
-          matching.map((st) => ({
-            id: `radio_${encodeURIComponent(st.name)}`,
-            title: st.name,
-            subtitle: st.genre || 'Estação de Rádio',
-            image: st.logo,
-            onClick: () => this.playRadio(st),
-          }))
-        );
-      }
-    });
-  }
-
-  private async playRadio(station: RadioStation) {
-    this.playingRadio = station;
-    this.nowPlayingBanner.style.display = 'flex';
-    this.nowPlayingBanner.style.alignItems = 'center';
-    this.nowPlayingBanner.style.justifyContent = 'space-between';
-
-    this.nowPlayingBanner.innerHTML = `
-      <div style="display:flex; align-items:center; gap:20px;">
-        ${station.logo ? `<img src="${station.logo}" style="width:64px; height:64px; object-fit:contain; border-radius:8px;" alt="" />` : ''}
-        <div>
-          <div style="font-size:24px; font-weight:800; color:#00e3ff;">${station.name}</div>
-          <div style="font-size:16px; opacity:0.7;">${station.genre} · Transmissão em Alta Qualidade</div>
-        </div>
-      </div>
-      <div style="padding:8px 18px; border-radius:20px; background:rgba(0,227,255,0.2); font-weight:700; color:#00e3ff;">
-        ● TRANSMITINDO AO VIVO
-      </div>
-    `;
-
-    try {
-      await this.player.play({
-        url: station.url,
-        title: station.name,
-        isLive: true,
-      });
-    } catch (e) {
-      console.error('[RadiosScreen] Erro ao reproduzir rádio:', e);
-    }
+  private teclas(e: KeyboardEvent) {
+    if (State.currentScreen !== 'radios' || this.tocando.classList.contains('hidden')) return;
+    const k = e.keyCode;
+    const total = this.estacoes.length;
+    if (k === 38) this.tocar((this.atual - 1 + total) % total);
+    else if (k === 40) this.tocar((this.atual + 1) % total);
+    else if (k === 10009 || k === 461 || k === 8 || k === 27 || k === 37) {
+      this.fechar();
+      SpatialNav.focus(this.fileiras.querySelector<HTMLElement>('.tv-card'));
+    } else return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
   }
 }

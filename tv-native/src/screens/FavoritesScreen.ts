@@ -18,7 +18,7 @@ export class FavoritesScreen {
     this.element.id = 'screen-favorites';
     this.element.innerHTML = `
       <div class="tv-fav-titulo">Favoritos <span id="fav-conta"></span></div>
-      <div class="tv-fav-vazio" id="fav-vazio">Nada nos favoritos ainda.<br />Aperte a tecla vermelha num canal ou título para favoritar.</div>
+      <div class="tv-fav-vazio" id="fav-vazio">Nada nos favoritos ainda.<br />Abra um título e use o botão Favoritar.</div>
       <div class="tv-screen-scroll tv-scroll-v" id="fav-fileiras"></div>
     `;
     this.vazio = this.element.querySelector('#fav-vazio')!;

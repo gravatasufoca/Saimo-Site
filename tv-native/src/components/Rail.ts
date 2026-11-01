@@ -10,6 +10,8 @@ export interface CardModel {
   title: string;
   subtitle?: string;
   image?: string;
+  /** Segundo escudo: o cartão vira "casa x fora". */
+  image2?: string;
   progressPercent?: number;
   badge?: string;
   badgeColor?: string;
@@ -62,7 +64,9 @@ export class Rail {
       if (this.isWide) {
         innerHtml = `
           <div class="tv-card-wide-inner">
-            ${card.image ? `<img class="tv-card-img" src="${card.image}" onerror="this.style.display='none'" loading="lazy" alt="" />` : ''}
+            ${card.badge ? `<span class="tv-selo">${card.badge}</span>` : ''}
+            ${card.image ? `<img class="tv-card-img ${card.image2 ? 'par' : ''}" src="${card.image}" onerror="this.style.display='none'" loading="lazy" alt="" />` : ''}
+            ${card.image2 ? `<span class="tv-x">x</span><img class="tv-card-img par" src="${card.image2}" onerror="this.style.display='none'" loading="lazy" alt="" />` : ''}
           </div>
           <div class="tv-card-title">${card.title}</div>
           ${card.subtitle ? `<div class="tv-card-subtitle">${card.subtitle}</div>` : ''}

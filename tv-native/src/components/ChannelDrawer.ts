@@ -44,7 +44,7 @@ export class ChannelDrawer {
       <div class="tv-painel-conta"><b id="pc-conta"></b><span id="pc-total"></span></div>
       <div class="tv-painel-chips"><div id="pc-chips"></div></div>
       <div class="tv-painel-lista" id="pc-lista"></div>
-      <div class="tv-painel-dica">OK assiste  ·  esquerda: seções  ·  direita: fontes</div>
+      <div class="tv-painel-dica">OK assiste  ·  esquerda: seções  ·  direita: fontes  ·  vermelha: favorita</div>
       <div class="tv-painel-info" id="pc-info"></div>
     `;
     this.chipsEl = this.element.querySelector('#pc-chips')!;
@@ -146,6 +146,14 @@ export class ChannelDrawer {
       e.preventDefault();
       e.stopImmediatePropagation();
       this.desenhar();
+      return;
+    }
+    // Vermelha ou Menu: favorita o canal em foco.
+    if (k === 403 || k === 10182 || k === 82) {
+      const c = this.filtrados[this.foco];
+      if (c) Storage.toggleFavoriteChannel(c.name);
+      e.preventDefault();
+      e.stopImmediatePropagation();
       return;
     }
     if (![37, 38, 39, 40, 13].includes(k)) return;

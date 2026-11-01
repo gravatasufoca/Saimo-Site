@@ -1,28 +1,26 @@
-/**
- * Tela de Eventos Esportivos e Jogos Ao Vivo (EventsScreen).
- * Agenda de partidas de futebol, basquete, lutas e automobilismo com escudos dos times,
- * placar em tempo real e sintonização direta do canal transmissor a um clique de OK.
- */
+/** Eventos: jogos com canal nosso, em cartões, e o cabeçalho seguindo o foco. */
 
 import { State } from '../core/State';
-import { Api, SportsEvent, Channel } from '../core/Api';
+import { Api, SportsEvent } from '../core/Api';
 import { SpatialNav } from '../core/SpatialNav';
+import { HeroBanner } from '../components/HeroBanner';
+import { Rail, CardModel } from '../components/Rail';
 
 export class EventsScreen {
   private element: HTMLElement;
-  private scrollContainer: HTMLElement;
-  private events: SportsEvent[] = [];
+  private fileiras: HTMLElement;
+  private hero = new HeroBanner();
 
   constructor() {
     this.element = document.createElement('div');
     this.element.className = 'tv-screen tv-events-screen hidden';
     this.element.id = 'screen-events';
-
-    this.scrollContainer = document.createElement('div');
-    this.scrollContainer.className = 'tv-screen-scroll tv-scroll-v';
-    this.scrollContainer.style.padding = '100px 70px 40px';
-
-    this.element.appendChild(this.scrollContainer);
+    const rolagem = document.createElement('div');
+    rolagem.className = 'tv-screen-scroll tv-scroll-v';
+    rolagem.appendChild(this.hero.getElement());
+    this.fileiras = document.createElement('div');
+    rolagem.appendChild(this.fileiras);
+    this.element.appendChild(rolagem);
   }
 
   getElement(): HTMLElement {
@@ -31,101 +29,40 @@ export class EventsScreen {
 
   async enter() {
     this.element.classList.remove('hidden');
-
-    if (State.channels.length === 0) {
-      State.channels = await Api.fetchChannels();
+    this.hero.setDefault('Eventos', 'Carregando...', '');
+    const jogos = await Api.fetchSportsEvents();
+    if (State.currentScreen !== 'events') return;
+    this.fileiras.innerHTML = '';
+    if (!jogos.length) {
+      this.hero.setDefault('Eventos', 'Nenhum jogo agora.', '');
+      return;
     }
-
-    this.scrollContainer.innerHTML = `
-      <div style="font-size:36px; font-weight:900; margin-bottom:8px;">Jogos & Eventos Esportivos</div>
-      <div style="font-size:18px; color:rgba(255,255,255,0.7); margin-bottom:30px;">
-        Selecione uma partida para assistir diretamente no canal transmissor.
-      </div>
-      <div id="events-list-container" style="display:flex; flex-direction:column; gap:16px; max-width:1200px;"></div>
-    `;
-
-    this.events = await Api.fetchSportsEvents();
-    this.renderEvents();
-
-    setTimeout(() => {
-      const first = this.scrollContainer.querySelector<HTMLElement>('.tv-match-card');
-      if (first) SpatialNav.focus(first);
-    }, 50);
+    this.fileira('Ao vivo agora', jogos.filter((j) => j.isLive));
+    this.fileira('Começa em breve', jogos.filter((j) => !j.isLive));
+    SpatialNav.focus(this.fileiras.querySelector<HTMLElement>('.tv-card'));
   }
 
   leave() {
     this.element.classList.add('hidden');
   }
 
-  private renderEvents() {
-    const container = this.scrollContainer.querySelector('#events-list-container');
-    if (!container) return;
-
-    if (this.events.length === 0) {
-      container.innerHTML = `
-        <div style="padding:40px; background:#141419; border-radius:16px; text-align:center;">
-          <div style="font-size:24px; font-weight:700; margin-bottom:8px;">Nenhum jogo com transmissão ao vivo no momento</div>
-          <div style="font-size:16px; opacity:0.7;">Consulte a programação dos canais esportivos na aba Ao Vivo.</div>
-        </div>
-      `;
-      return;
-    }
-
-    container.innerHTML = '';
-
-    this.events.forEach((ev, idx) => {
-      const card = document.createElement('div');
-      card.className = 'tv-match-card nav-focusable';
-      card.setAttribute('data-nav', 'true');
-      card.id = `event-card-${idx}`;
-
-      const timeStr = new Date(ev.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-      card.innerHTML = `
-        <div class="tv-match-team">
-          ${ev.homeShield ? `<img class="tv-match-shield" src="${ev.homeShield}" onerror="this.style.display='none'" alt="" />` : ''}
-          <span style="font-size:22px; font-weight:800;">${ev.homeTeam}</span>
-        </div>
-
-        <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
-          <div class="tv-match-score">${ev.score || 'VS'}</div>
-          <div style="font-size:15px; font-weight:700; color:${ev.isLive ? '#ff4d4d' : '#00e3ff'};">
-            ${ev.isLive ? '● AO VIVO' : timeStr} · ${ev.league}
-          </div>
-          ${ev.channelName ? `<div style="font-size:14px; opacity:0.8;">Canal: ${ev.channelName}</div>` : ''}
-        </div>
-
-        <div class="tv-match-team away">
-          <span style="font-size:22px; font-weight:800;">${ev.awayTeam}</span>
-          ${ev.awayShield ? `<img class="tv-match-shield" src="${ev.awayShield}" onerror="this.style.display='none'" alt="" />` : ''}
-        </div>
-      `;
-
-      card.addEventListener('click', () => {
-        this.tuneEventChannel(ev);
-      });
-
-      container.appendChild(card);
-    });
-  }
-
-  private tuneEventChannel(ev: SportsEvent) {
-    if (!ev.channelName) {
-      State.setScreen('live');
-      return;
-    }
-
-    // Procura o canal por aproximação de nome
-    const query = ev.channelName.toLowerCase().replace(/\s+/g, '');
-    const found = State.channels.find((c) => {
-      const cName = c.name.toLowerCase().replace(/\s+/g, '');
-      return cName.includes(query) || query.includes(cName);
-    });
-
-    if (found) {
-      State.setScreen('live', { channel: found });
-    } else {
-      State.setScreen('live');
-    }
+  private fileira(titulo: string, jogos: SportsEvent[]) {
+    if (!jogos.length) return;
+    const hora = (j: SportsEvent) => new Date(j.startTime).toTimeString().slice(0, 5);
+    const r = new Rail(titulo, true);
+    r.setCards(jogos.map((j): CardModel => ({
+      id: j.id,
+      title: `${j.homeTeam} x ${j.awayTeam}`,
+      subtitle: `${j.channelName}  ·  ${j.league}`,
+      image: j.homeShield,
+      image2: j.awayShield,
+      badge: j.isLive ? 'AO VIVO' : hora(j),
+      onFocus: () => this.hero.setDefault(`${j.homeTeam} x ${j.awayTeam}`, `${j.league}  ·  ${hora(j)}`, `No canal ${j.channelName}  ·  OK assiste`),
+      onClick: () => {
+        const canal = State.channels.find((c) => c.name === j.channelName);
+        if (canal) State.setScreen('live', { channel: canal });
+      },
+    })));
+    this.fileiras.appendChild(r.getElement());
   }
 }

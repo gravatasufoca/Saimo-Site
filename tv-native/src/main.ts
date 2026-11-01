@@ -90,7 +90,8 @@ class SaimoTVApp {
 
     // Pré-carrega canais e destaques da tela inicial em background de forma assíncrona
     Api.fetchDestaques().catch(() => {});
-    Api.fetchChannels().catch(() => {});
+    Api.fetchChannels().then((c) => { if (c.length) State.channels = c; }).catch(() => {});
+    Api.fetchEPG();
 
     const prefs = Storage.getPrefs();
     if (prefs.abrirEm === 'canal' && prefs.ultimoCanal) {

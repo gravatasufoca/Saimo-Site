@@ -207,45 +207,58 @@ export class Api {
   }
 
   // ===== EPG (GUIA DE PROGRAMAÇÃO) =====
+  // guia.txt diz o código de cada canal no meuguia.tv; a página do canal traz a programação.
+  private static epgCarregando = false;
+
   static async fetchEPG(): Promise<void> {
+    if (this.epgCarregando) return;
+    this.epgCarregando = true;
     try {
-      const url = `${this.getBaseUrl('canais')}guia.txt?t=${Date.now()}`;
-      const res = await fetch(url);
+      const res = await fetch(`${this.getBaseUrl('canais')}guia.txt`);
       if (!res.ok) return;
-      const text = await res.text();
-      this.parseEPG(text);
-    } catch (e) {}
+      const fila = (await res.text()).split('\n')
+        .map((l) => l.trim().split('\t'))
+        .filter((p) => p[0] === 'meuguia' && p.length >= 3);
+      const trabalhador = async () => {
+        for (let item = fila.shift(); item; item = fila.shift()) {
+          try {
+            const r = await fetch(`https://meuguia.tv/programacao/canal/${item[2]}`);
+            if (r.ok) this.epgCache.set(item[1], this.lerMeuGuia(await r.text()));
+          } catch { /* canal fica sem guia */ }
+        }
+      };
+      // Poucas ao mesmo tempo: TV fraca e rede de casa.
+      await Promise.all([trabalhador(), trabalhador(), trabalhador(), trabalhador()]);
+    } catch { /* sem guia */ } finally {
+      this.epgCarregando = false;
+    }
   }
 
-  private static parseEPG(text: string) {
-    const lines = text.split('\n');
-    const now = Date.now();
-    for (const line of lines) {
-      const parts = line.split('\t');
-      if (parts.length < 4) continue;
-      const channelName = parts[0].trim();
-      const start = new Date(parseInt(parts[1]) * 1000);
-      const stop = new Date(parseInt(parts[2]) * 1000);
-      const title = parts[3].trim();
-
-      const durationMs = stop.getTime() - start.getTime();
-      const remainingMs = stop.getTime() - now;
-      const progress = Math.max(0, Math.min(1, (now - start.getTime()) / durationMs));
-
-      const prog: EpgProgram = {
-        title,
-        start,
-        stop,
-        durationMin: Math.round(durationMs / 60000),
-        remainingMin: Math.max(0, Math.round(remainingMs / 60000)),
-        progress,
-      };
-
-      if (!this.epgCache.has(channelName)) {
-        this.epgCache.set(channelName, []);
+  /** Itens <li>: cabeçalho do dia e programas; o fim de um é o início do seguinte. Hora de Brasília. */
+  private static lerMeuGuia(html: string): EpgProgram[] {
+    const hoje = new Date(Date.now() - 3 * 3600 * 1000);
+    let ano = hoje.getUTCFullYear();
+    let mes = hoje.getUTCMonth() + 1;
+    let dia = hoje.getUTCDate();
+    const lista: { title: string; start: number }[] = [];
+    for (const item of html.split('<li')) {
+      if (item.includes('subheader')) {
+        const d = /,\s*(\d+)\/(\d+)/.exec(item);
+        if (d) { dia = +d[1]; mes = +d[2]; }
+        continue;
       }
-      this.epgCache.get(channelName)!.push(prog);
+      const hora = /lileft time['"]>\s*(\d+):(\d+)/.exec(item);
+      const titulo = /<h2>([^<]*)<\/h2>/.exec(item);
+      if (!hora || !titulo) continue;
+      const t = document.createElement('textarea');
+      t.innerHTML = titulo[1];
+      lista.push({ title: t.value.trim(), start: Date.UTC(ano, mes - 1, dia, +hora[1] + 3, +hora[2]) });
     }
+    const agora = Date.now();
+    return lista.map((p, i) => {
+      const stop = i + 1 < lista.length ? lista[i + 1].start : p.start + 3600000;
+      return { title: p.title, start: new Date(p.start), stop: new Date(stop), durationMin: Math.round((stop - p.start) / 60000), remainingMin: 0, progress: 0 };
+    }).filter((p) => p.stop.getTime() > agora).slice(0, 12);
   }
 
   static getNowNext(channelName: string): { current?: EpgProgram; next?: EpgProgram } {
@@ -253,6 +266,11 @@ export class Api {
     if (!list || list.length === 0) return {};
     const now = Date.now();
     const sorted = [...list].sort((a, b) => a.start.getTime() - b.start.getTime());
+    for (const p of sorted) {
+      const total = p.stop.getTime() - p.start.getTime();
+      p.remainingMin = Math.max(0, Math.round((p.stop.getTime() - now) / 60000));
+      p.progress = Math.max(0, Math.min(1, (now - p.start.getTime()) / total));
+    }
 
     const currentIdx = sorted.findIndex((p) => now >= p.start.getTime() && now < p.stop.getTime());
     if (currentIdx !== -1) {
@@ -627,31 +645,61 @@ export class Api {
   // ===== EVENTOS ESPORTIVOS =====
   static async fetchSportsEvents(): Promise<SportsEvent[]> {
     try {
-      const url = 'https://embedtv.cc/api/jogos.php';
-      const res = await fetch(url);
+      // O caminho do site é a reserva, caso a TV barre o pedido direto.
+      const res = await fetch('https://embedtv.cc/api/events').catch(() => fetch('https://saimo-tv.pages.dev/api/events'));
       if (!res.ok) return [];
       const json = await res.json();
       if (!Array.isArray(json)) return [];
-
-      return json.map((j: any) => ({
-        id: `jogo_${j.id || Math.random()}`,
-        homeTeam: j.time1 || j.casa || 'Time Casa',
-        awayTeam: j.time2 || j.fora || 'Time Fora',
-        homeShield: j.logo1 || j.escudo1 || '',
-        awayShield: j.logo2 || j.escudo2 || '',
-        league: j.campeonato || j.liga || 'Futebol',
-        startTime: j.data ? new Date(j.data).getTime() : Date.now(),
-        channelName: j.canal || '',
-        score: j.placar || '',
-        matchTime: j.tempo || '',
-        isLive: Boolean(j.ao_vivo || j.vivo),
-      }));
+      const agora = Date.now();
+      const nome = (t: string) => t.toLowerCase().replace(/[\s-]/g, '');
+      const canais = await this.fetchChannels();
+      const grande = (u: string) => (u || '').replace('w_34,h_34', 'w_256,h_256');
+      const saida: SportsEvent[] = [];
+      for (const j of json) {
+        const player = j.players?.[0];
+        if (!player || !j.teams) continue;
+        // O canal vem no fim do endereço do player ("…/premiere-fc").
+        const apelido = nome(String(player).split('/').pop() || '');
+        const canal = apelido
+          ? canais.find((c) => nome(c.name) === apelido) || canais.find((c) => nome(c.name).includes(apelido))
+          : undefined;
+        if (!canal) continue;
+        const inicio = new Date(j.time_start).getTime();
+        const fim = j.time_end ? new Date(j.time_end).getTime() : inicio + 7200000;
+        if (fim <= agora) continue;
+        saida.push({
+          id: `jogo_${j.id}`,
+          homeTeam: j.teams.home.name,
+          awayTeam: j.teams.away.name,
+          homeShield: grande(j.teams.home.image),
+          awayShield: grande(j.teams.away.image),
+          league: j.league?.name || '',
+          startTime: inicio,
+          channelName: canal.name,
+          isLive: agora >= inicio,
+        });
+      }
+      return saida.sort((a, b) => a.startTime - b.startTime);
     } catch (e) {
       return [];
     }
   }
 
-  // ===== RÁDIOS =====
+  /** Mesmos estilos da TV Box: rádio que cabe em dois fica no primeiro. */
+  private static estiloDaRadio(nome: string): string {
+    const n = `${nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()} `;
+    const estilos: [string, string[]][] = [
+      ['Rock', ['rock', 'metal', 'kiss', 'punk']],
+      ['Notícias e esporte', ['news', 'noticia', 'cbn', 'gaucha', 'itatiaia', 'tupi', 'esporte', 'jornal', 'bandnews', 'radio globo', 'eldorado', 'bandeirantes']],
+      ['Gospel e católicas', ['gospel', 'evangel', 'catolic', 'crista', 'louvor', 'aleluia', 'cancao nova', 'novo tempo', 'aparecida', 'fe ', 'deus', 'jesus', 'igreja', 'biblia']],
+      ['Pop e hits', ['pop', 'hits', 'dance', 'mix', 'jovem pan', 'transamerica', 'energia', 'eletro', 'club', 'pulse', 'top']],
+      ['Sertanejo, MPB e samba', ['sertanej', 'mpb', 'samba', 'pagode', 'forro', 'nativa', 'caipira', 'brega', 'axe', 'piseiro', 'moda de viola']],
+      ['Clássica e jazz', ['classic', 'jazz', 'cultura', 'educativa', 'universit', 'instrumental', 'blues', 'lounge']],
+    ];
+    const achado = estilos.find(([, palavras]) => palavras.some((p) => n.includes(p)));
+    return achado ? achado[0] : 'Outras';
+  }
+
   static async fetchRadios(): Promise<RadioStation[]> {
     try {
       const url = `${this.getBaseUrl('canais')}radios.txt?t=${Date.now()}`;
@@ -661,14 +709,10 @@ export class Api {
       const radios: RadioStation[] = [];
 
       for (const line of text.split('\n')) {
-        const parts = line.split('\t');
+        if (!line.trim() || line.startsWith('#')) continue;
+        const parts = line.split('|');
         if (parts.length >= 2) {
-          radios.push({
-            name: parts[0].trim(),
-            url: parts[1].trim(),
-            logo: parts[2]?.trim() || '',
-            genre: parts[3]?.trim() || 'Geral',
-          });
+          radios.push({ name: parts[0].trim(), url: parts[1].trim(), logo: parts[2]?.trim() || '', genre: this.estiloDaRadio(parts[0]) });
         }
       }
       return radios;

@@ -173,3 +173,15 @@ html.tizen.video-ativo, html.tizen.video-ativo body { background: transparent !i
 .tv-zap-next-line { font-size: 30px; color: #D5DCE5; }
 .tv-zap-progress-container { height: 6px; background: rgba(255,255,255,.2); }
 .tv-zap-progress-bar { height: 6px; background: #4FE3D0; }
+
+.tv-card-wide-inner { position: relative; }
+.tv-card-wide-inner .tv-card-img.par { width: 180px; height: 180px; }
+.tv-x { font-size: 48px; font-weight: 500; color: #A8B4C0; margin: 0 26px; }
+.tv-selo { position: absolute; left: 20px; top: 18px; padding: 4px 22px; border-radius: 22px; background: #FF4D4F; font-size: 24px; font-weight: 500; color: #fff; }
+.tv-radio-tocando { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+.tv-radio-tocando .logo { position: absolute; left: 210px; top: 200px; width: 560px; height: 560px; border-radius: 40px; background: rgba(255,255,255,.12); display: flex; align-items: center; justify-content: center; }
+.tv-radio-tocando .logo img { max-width: 260px; max-height: 260px; }
+.tv-radio-tocando .selo { position: absolute; left: 870px; top: 36px; padding: 10px 44px; border-radius: 30px; background: #FF4D4F; font-size: 28px; font-weight: 500; }
+.tv-radio-tocando .nome { position: absolute; left: 870px; top: 140px; width: 960px; font-size: 108px; line-height: 124px; font-weight: 500; }
+.tv-radio-tocando .info { position: absolute; left: 870px; top: 440px; font-size: 42px; color: #4FE3D0; }
+.tv-radio-tocando .dica { position: absolute; left: 0; top: 980px; width: 1920px; text-align: center; font-size: 30px; color: #A8B4C0; }
