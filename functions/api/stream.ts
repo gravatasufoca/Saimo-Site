@@ -180,6 +180,14 @@ async function buscarAddon(url: string, timeoutMs: number = 5000, customAgent?: 
       baseHeaders['X-Forwarded-For'] = clientIp;
       baseHeaders['CF-Connecting-IP'] = clientIp;
     }
+    // Os provedores limitam os IPs da Cloudflare (429): o que já responderam fica
+    // guardado 1 h, e cada título deixa de gastar uma consulta por pessoa.
+    const chave = new Request(url);
+    const guardado = await caches.default.match(chave);
+    if (guardado) {
+      const text = await guardado.text();
+      return { streams: (JSON.parse(text) as { streams?: StreamItem[] }).streams || [], status: 200, raw: 'cache' };
+    }
     const res = await fetch(fetchUrl, {
       headers: baseHeaders,
       cache: 'no-store',
@@ -191,6 +199,9 @@ async function buscarAddon(url: string, timeoutMs: number = 5000, customAgent?: 
     const text = await res.text();
     let data: { streams?: StreamItem[] } = {};
     try { data = JSON.parse(text); } catch {}
+    if (data.streams?.length) {
+      await caches.default.put(chave, new Response(text, { headers: { 'Cache-Control': 'public, max-age=3600' } }));
+    }
     return { streams: data.streams || [], status: res.status, raw: text.slice(0, 200) };
   } catch (e: any) {
     return { streams: [], status: 0, err: e?.message || String(e) };
@@ -741,8 +752,11 @@ export const onRequestGet: PagesFunction = async ({ request }) => {
   if (!escolhido) {
     const validos = ordenados.filter(st => !SERVIDORES_MORTOS.some(h => st.url!.includes(h)));
     if (validos.length === 0) {
+      // Provedor limitando não quer dizer que o título não existe: quem audita o
+      // acervo precisa distinguir, senão filme bom sai do app.
+      const limitado = resultados.some(r => r.status === 429);
       return new Response(JSON.stringify({ error: 'Nenhum stream disponível para este título' }), {
-        status: 404,
+        status: limitado ? 503 : 404,
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' },
       });
     }
