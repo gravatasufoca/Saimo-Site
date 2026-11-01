@@ -98,6 +98,7 @@ export class SourceModal {
     }
 
     this.element.classList.remove('hidden');
+    SpatialNav.pausado = false;
     SpatialNav.setTrap(this.element);
 
     const first = this.listEl.querySelector<HTMLElement>('.tv-btn');
@@ -107,6 +108,10 @@ export class SourceModal {
   close() {
     this.element.classList.add('hidden');
     SpatialNav.setTrap(null);
+    if (document.querySelector('.tv-painel-canais:not(.hidden)')) {
+      SpatialNav.limpar();
+      SpatialNav.pausado = true;
+    }
   }
 
   isOpen(): boolean {

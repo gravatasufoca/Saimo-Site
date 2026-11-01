@@ -183,6 +183,6 @@ export class SettingsScreen {
       : 'Navegador Web / Simulador';
 
     addOption('sobre-plataforma', 'Sistema Operacional', platformLabel, () => {});
-    addOption('sobre-versao', 'Versão', '2.6.2', () => {});
+    addOption('sobre-versao', 'Versão', '2.6.3', () => {});
       }
 }

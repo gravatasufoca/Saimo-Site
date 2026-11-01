@@ -29,11 +29,13 @@ export class ChannelDrawer {
   private foco = 0;
   private topo = 0;
   private area: 'lista' | 'chips' = 'lista';
+  private escolhendo = false;
 
   constructor(
     private onSelectChannel: (channel: Channel) => void,
     private onOpenChannelSources?: (channel: Channel) => void,
-    private onSubir?: () => void
+    private onSubir?: () => void,
+    private onMulti?: () => void
   ) {
     this.element = document.createElement('div');
     this.element.className = 'tv-painel-canais hidden';
@@ -65,6 +67,7 @@ export class ChannelDrawer {
     this.secoes = ORDEM.filter((s) => vistas.has(s));
     vistas.forEach((s) => { if (!this.secoes.includes(s)) this.secoes.push(s); });
     if (Storage.getFavoriteChannels().size > 0) this.secoes.unshift('Favoritos');
+    if (!this.escolhendo) this.secoes.push('Multi tela');
 
     const i = atual ? this.secoes.indexOf(atual.category) : -1;
     this.secao = i >= 0 ? i : 0;
@@ -75,11 +78,27 @@ export class ChannelDrawer {
       if (p >= 0) this.foco = p;
     }
     this.element.classList.remove('hidden');
+    SpatialNav.pausado = true;
     this.desenhar();
   }
 
   close() {
     this.element.classList.add('hidden');
+    SpatialNav.pausado = false;
+    this.escolhendo = false;
+    this.element.querySelector('.tv-painel-titulo')!.textContent = 'Canais';
+  }
+
+  /** Multi tela: a mesma lista, agora para escolher a segunda tela. */
+  escolherSegunda(channels: Channel[], atual: Channel | null) {
+    this.escolhendo = true;
+    this.element.querySelector('.tv-painel-titulo')!.textContent = 'Segunda tela';
+    this.element.classList.add('hidden');
+    this.open(channels, atual);
+  }
+
+  estaEscolhendo(): boolean {
+    return this.escolhendo;
   }
 
   isOpen(): boolean {
@@ -137,7 +156,7 @@ export class ChannelDrawer {
   }
 
   private teclas(e: KeyboardEvent) {
-    if (!this.isOpen()) return;
+    if (!this.isOpen() || !SpatialNav.pausado) return;
     const k = e.keyCode;
     if (SpatialNav.noMenu()) {
       if (k !== 40) return;
@@ -163,6 +182,7 @@ export class ChannelDrawer {
     if (this.area === 'chips') {
       if (k === 37 && this.secao > 0) this.secao--;
       else if (k === 39 && this.secao < this.secoes.length - 1) this.secao++;
+      else if (k === 13 && this.secoes[this.secao] === 'Multi tela') { this.onMulti?.(); return; }
       else if (k === 40 || k === 13) this.area = 'lista';
       else if (k === 38) { this.onSubir?.(); return; }
       else return;

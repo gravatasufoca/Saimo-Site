@@ -9,6 +9,7 @@ import { State } from '../core/State';
 import { Channel, Api } from '../core/Api';
 import { Storage } from '../core/Storage';
 import { TVPlayerInstance } from '../player/TVPlayer';
+import { HlsPlayer } from '../player/HlsPlayer';
 import { ZapHUD } from '../components/ZapHUD';
 import { ChannelDrawer } from '../components/ChannelDrawer';
 import { SourceModal } from '../components/SourceModal';
@@ -38,13 +39,18 @@ export class LiveScreen {
 
     this.drawer = new ChannelDrawer(
       (channel) => {
+        if (this.drawer.estaEscolhendo()) {
+          this.entrarMulti(channel);
+          return;
+        }
         this.fecharPainel();
         if (State.currentChannel?.id !== channel.id) this.tuneChannel(channel);
       },
       (channel) => {
         this.openChannelSources(channel);
       },
-      () => this.subirAoMenu()
+      () => this.subirAoMenu(),
+      () => this.drawer.escolherSegunda(State.channels, State.currentChannel)
     );
 
     this.sourceModal = new SourceModal();
@@ -87,6 +93,77 @@ export class LiveScreen {
     State.canalEscolhido = false;
   }
 
+  // ===== MULTI TELA =====
+  // O canal principal segue no player da TV; o segundo vai por um <video> com
+  // hls.js. Só existe enquanto a multi tela está aberta: em TV fraca, um segundo
+  // player parado ainda segura decodificador e memória.
+  private video2: HTMLVideoElement | null = null;
+  private player2: HlsPlayer | null = null;
+  private segundo: Channel | null = null;
+  private avisoMulti: HTMLElement | null = null;
+  private prazoMulti: any = null;
+
+  private janela(x: number, y: number, w: number, h: number) {
+    this.player.setRect?.(x, y, w, h);
+    const v = document.getElementById('tv-video') as HTMLElement;
+    Object.assign(v.style, { left: `${x}px`, top: `${y}px`, width: `${w}px`, height: `${h}px` });
+  }
+
+  private entrarMulti(canal: Channel) {
+    this.drawer.close();
+    this.zapHud.hide();
+    this.janela(0, 270, 960, 540);
+    State.emit('tela-cheia', true);
+    if (!this.video2) {
+      this.video2 = document.createElement('video');
+      this.video2.className = 'tv-video-2';
+      this.video2.muted = true;
+      document.getElementById('app')!.insertBefore(this.video2, document.getElementById('tv-screens-container'));
+      this.avisoMulti = document.createElement('div');
+      this.avisoMulti.className = 'tv-multi-aviso';
+      this.element.appendChild(this.avisoMulti);
+    }
+    this.video2.style.display = 'block';
+    this.player2 = new HlsPlayer(this.video2, {});
+    this.tocarSegundo(canal, 0);
+  }
+
+  private tocarSegundo(canal: Channel, fonte: number) {
+    this.segundo = canal;
+    const v = canal.variants[fonte];
+    clearTimeout(this.prazoMulti);
+    if (!v) {
+      this.sairMulti();
+      this.zapHud.hide();
+      return;
+    }
+    this.avisoMulti!.textContent = `${canal.name}  ·  OK troca o som de tela  ·  VOLTAR sai da multi tela`;
+    this.player2!.play({ url: v.url, isLive: true }).catch(() => {});
+    // Fonte que não anda em 12 s desce para a seguinte; acabadas, a TV não aguenta.
+    this.prazoMulti = setTimeout(() => {
+      if (this.video2 && this.video2.currentTime === 0) this.tocarSegundo(canal, fonte + 1);
+    }, 12000);
+  }
+
+  private trocarTelas() {
+    const a = State.currentChannel;
+    const b = this.segundo;
+    if (!a || !b) return;
+    this.tuneChannel(b);
+    this.zapHud.hide();
+    this.tocarSegundo(a, 0);
+  }
+
+  private sairMulti() {
+    clearTimeout(this.prazoMulti);
+    this.player2?.destroy();
+    this.player2 = null;
+    this.segundo = null;
+    if (this.video2) this.video2.style.display = 'none';
+    if (this.avisoMulti) this.avisoMulti.textContent = '';
+    this.janela(0, 0, 1920, 1080);
+  }
+
   private abrirPainel() {
     if (this.drawer.isOpen()) return;
     this.zapHud.hide();
@@ -127,6 +204,7 @@ export class LiveScreen {
   leave() {
     this.element.classList.add('hidden');
     this.zapHud.hide();
+    if (this.player2) this.sairMulti();
     this.fecharPainel();
     this.sourceModal.close();
     this.player.stop();
@@ -211,6 +289,14 @@ export class LiveScreen {
 
   private handleKeyDown(e: KeyboardEvent) {
     if (State.currentScreen !== 'live') return;
+
+    if (this.player2) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (e.keyCode === 13) this.trocarTelas();
+      else if (e.keyCode === 10009 || e.keyCode === 461 || e.keyCode === 8 || e.keyCode === 27) this.sairMulti();
+      return;
+    }
 
     // Se o Drawer de Canais ou o Modal de Fontes estiver aberto, deixa o SpatialNav tratar
     if (this.drawer.isOpen() || this.sourceModal.isOpen()) {

@@ -80,6 +80,7 @@ export class RadiosScreen {
     this.grade.classList.add('hidden');
     this.tocando.classList.remove('hidden');
     SpatialNav.limpar();
+    SpatialNav.pausado = true;
     State.emit('tela-cheia', true);
     this.player.play({ url: s.url, title: s.name, isLive: true }).catch(() => {});
   }
@@ -87,6 +88,7 @@ export class RadiosScreen {
   private fechar() {
     if (this.tocando.classList.contains('hidden')) return;
     this.player.stop();
+    SpatialNav.pausado = false;
     this.tocando.classList.add('hidden');
     this.grade.classList.remove('hidden');
     State.emit('tela-cheia', false);

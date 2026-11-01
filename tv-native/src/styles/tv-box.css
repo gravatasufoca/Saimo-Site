@@ -185,3 +185,7 @@ html.tizen.video-ativo, html.tizen.video-ativo body { background: transparent !i
 .tv-radio-tocando .nome { position: absolute; left: 870px; top: 140px; width: 960px; font-size: 108px; line-height: 124px; font-weight: 500; }
 .tv-radio-tocando .info { position: absolute; left: 870px; top: 440px; font-size: 42px; color: #4FE3D0; }
 .tv-radio-tocando .dica { position: absolute; left: 0; top: 980px; width: 1920px; text-align: center; font-size: 30px; color: #A8B4C0; }
+
+/* Multi tela */
+.tv-video-2 { display: none; position: absolute; left: 960px; top: 270px; width: 960px; height: 540px; z-index: 2; background: #000; object-fit: contain; }
+.tv-multi-aviso { position: absolute; left: 0; top: 860px; width: 1920px; text-align: center; font-size: 30px; color: #D5DCE5; }

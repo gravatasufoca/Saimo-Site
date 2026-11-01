@@ -30,6 +30,8 @@ export class SpatialNav {
   }
 
   /** Tira o foco de tudo: um painel com teclas próprias assume. */
+  static pausado = false;
+
   static limpar() {
     this.currentElement?.classList.remove('nav-focused');
     this.currentElement = null;
@@ -79,6 +81,8 @@ export class SpatialNav {
   }
 
   static handleKeyDown(e: KeyboardEvent): boolean {
+    // Painel com teclas próprias aberto: só o menu do topo continua aqui.
+    if (this.pausado && !this.noMenu()) return false;
     const key = e.keyCode;
 
     let dir: Direction | null = null;
