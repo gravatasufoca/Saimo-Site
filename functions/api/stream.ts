@@ -417,8 +417,6 @@ const SERVIDORES_MORTOS = [
   'corruptx.org',
   'governosptx.org',
   'desativado.invalid',
-  'fenixhub.online',
-  'fenixflix.fenixhub.online',
 ];
 
 /** Aliases para títulos recém-lançados ou sequências que compartilham acervo nos provedores */
@@ -510,8 +508,17 @@ async function respondeVideo(url: string): Promise<string | null> {
     leitor.cancel().catch(() => {});
     const corpo = (value ?? new Uint8Array()).slice(0, 1024);
     const inicio = new TextDecoder().decode(corpo.slice(0, 16)).trimStart();
-    if (inicio.startsWith('#EXTM3U')) return finalUrl;
+    if (inicio.startsWith('#EXTM3U')) {
+      return normalizar(alvo.includes('embedplayer2.xyz') ? (r.url || alvo) : alvo);
+    }
     if (corpo.length === 0 || corpo[0] === 0x3c /* < */ || corpo[0] === 0x7b /* { */) return null;
+
+    // Se a URL original usa token assinado com redirect (ex: Fenix /r/..., Zeus, Badger),
+    // sempre devolve a URL original 'alvo' para que o player do cliente faça o redirecionamento
+    // com seu próprio IP residencial e não receba HTTP 403 "Assinatura inválida".
+    if (alvo.includes('/r/') || alvo.includes('fenixhub.online') || alvo.includes('fenixflix')) {
+      return normalizar(alvo);
+    }
     return finalUrl;
   } catch {
     return null;
@@ -632,6 +639,10 @@ export const onRequestGet: PagesFunction = async ({ request }) => {
     }
     // Minha Melhor Amiga (2026): FrostStream e listas antigas entregam o filme italiano de 2014 (Una donna per amica) ou Pokémon
     if (cleanId === '1257147' && (st.url.includes('froststream') || st.url.includes('249904.mp4') || st.url.includes('78879.mp4'))) {
+      return false;
+    }
+    // Apocalipse Z: Novo Mundo (2026): Provedores entregam o filme anterior (O Princípio do Fim)
+    if (cleanId === '1507696' && (st.url.includes('54606.mp4') || st.url.includes('47748.mp4') || st.url.includes('64484.mp4') || (st.title && st.title.toLowerCase().includes('princípio')))) {
       return false;
     }
     // Filmes inéditos / não lançados que recebem streams de filmes antigos homônimos
